@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guidebook Management</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: row;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .treeview {
+   	        width: 25%;
+    	    border-right: 1px solid #ccc;
+   	        padding: 10px;
+   	        box-sizing: border-box;
+   	        height: 100vh;
+            overflow-y: auto;
+   	        position: fixed;
+   	        background-color: #F7F012;  /* BACKGROUND COLOR OF TREEVIEW*/
+	        text-align: center;
+	    }
+	
+	    .treeview-image {
+	        width: 100%; 
+	        height: auto; 
+	        margin-bottom: 10px; 
+   	        max-width: 200px;
+	        display: inline-block;
+	    }
+
+        .content {
+            left: 25%;
+	        width: 75%;
+            padding: 10px;
+            box-sizing: border-box;
+            height: 100vh;
+            overflow-y: auto;
+	        position: absolute;
+	        background-color: #f0f0f0; /*BACKGROUND COLOR OF CONTENT SIDE*/
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .title span {
+            white-space: normal;
+            overflow: visible; 
+            text-overflow: clip;
+            display: block;
+            width: calc(100% - 20px); 
+            text-align: left;
+        }
+
+        .title .icon {
+            margin-left: 10px;
+        }
+
+        .subtitles {
+            margin-left: 20px;
+            display: none;
+        }
+
+        .subtitle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            flex-direction: row;
+        }
+
+        .subtitle-icons {
+            display: flex;
+            gap: 5px; 
+        }
+
+       .subtitle a {
+            flex: 1; 
+            white-space: normal; 
+            overflow: visible;
+            text-overflow: clip;
+            color: black;
+            text-decoration: none;
+            text-align: left;
+            font-family: 'Times New Roman', serif;
+        }
+
+        .edit-form, .add-subtitle-form {
+            display: none;
+        }
+
+        #content-display {
+            flex-grow: 1;
+        }
+
+        .content-edit-form {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="treeview">
+	<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT0BFUm2UwE_SeepNWIuPHX3NFmWLJWxLPCLw&s" alt="Treeview Image" class="treeview-image">
+        <!-- Add Title Form -->
+        <form action="{{ url_for('add_title') }}" method="POST" class="mb-3">
+            <div class="input-group">
+                <input type="text" class="form-control" name="title_name" placeholder="Add Title" required>
+                <div class="input-group-append">
+                    <button class="btn btn-success" type="submit"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Title List -->
+        {% for title in titles %}
+        <div class="title-container">
+            <div class="title" onclick="toggleSubtitles({{ title.id }})">
+                <span>
+                    <i class="fas fa-chevron-right icon" id="icon-{{ title.id }}"></i> {{ title.name }}
+                </span>
+                <span>
+                    <button class="btn btn-warning icon" onclick="toggleEditForm({{ title.id }}); event.stopPropagation();"><i class="fas fa-edit"></i></button>
+                    <a href="{{ url_for('delete_title', id=title.id) }}" class="btn btn-danger icon"><i class="fas fa-trash"></i></a>
+                    <button class="btn btn-success icon" onclick="toggleAddSubtitleForm({{ title.id }}); event.stopPropagation();"><i class="fas fa-plus"></i></button>
+                </span>
+            </div>
+            <!-- Edit Title Form -->
+            <form action="{{ url_for('edit_title', id=title.id) }}" method="POST" class="edit-form" id="edit-form-{{ title.id }}">
+                <div class="input-group">
+                    <input type="text" name="title_name" value="{{ title.name }}" class="form-control" required />
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="submit">Save</button>
+                        <button class="btn btn-secondary" type="button" onclick="toggleEditForm({{ title.id }});">Cancel</button>
+                    </div>
+                </div>
+            </form>
+            <!-- Add Subtitle Form -->
+            <form action="{{ url_for('add_subtitle', title_id=title.id) }}" method="POST" class="add-subtitle-form" id="add-subtitle-form-{{ title.id }}">
+                <div class="input-group">
+                    <input type="text" name="subtitle_name" placeholder="Add Subtitle" class="form-control" required />
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="submit">Add</button>
+                        <button class="btn btn-secondary" type="button" onclick="toggleAddSubtitleForm({{ title.id }});">Cancel</button>
+                    </div>
+                </div>
+            </form>
+            <!-- Subtitles List -->
+            <div class="subtitles" id="subtitles-{{ title.id }}">
+                {% for subtitle in title.subtitles %}
+                <div class="subtitle">
+                    <a href="#" onclick="loadContent({{ subtitle.id }}); return false;">{{ subtitle.name }}</a>
+                    <div class="subtitle-icons">
+                        <button class="btn btn-warning icon" onclick="toggleSubtitleEditForm({{ subtitle.id }}); event.stopPropagation();"><i class="fas fa-edit"></i></button>
+                        <a href="{{ url_for('delete_subtitle', id=subtitle.id) }}" class="btn btn-danger icon"><i class="fas fa-trash"></i></a>
+                    </div>
+                    <form action="{{ url_for('edit_subtitle', id=subtitle.id) }}" method="POST" class="edit-form" id="edit-subtitle-form-{{ subtitle.id }}">
+                        <div class="input-group">
+                            <input type="text" name="subtitle_name" value="{{ subtitle.name }}" class="form-control" required />
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" type="submit">Save</button>
+                                <button class="btn btn-secondary" type="button" onclick="toggleSubtitleEditForm({{ subtitle.id }});">Cancel</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="content">
+        <!-- Content will be shown here -->
+        <div id="content-display"></div>
+        <form action="#" method="POST" class="content-edit-form" id="content-edit-form">
+            <div class="input-group">
+                <textarea name="content" class="form-control" rows="10" required></textarea>
+                <div class="input-group-append">
+                    <button class="btn btn-primary" type="submit">Save</button>
+                    <button class="btn btn-secondary" type="button" onclick="closeEditForm();">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function toggleSubtitles(titleId) {
+            var subtitles = document.getElementById('subtitles-' + titleId);
+            var icon = document.getElementById('icon-' + titleId);
+            if (subtitles.style.display === 'none' || subtitles.style.display === '') {
+                subtitles.style.display = 'block';
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                subtitles.style.display = 'none';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
+        }
+
+        function toggleEditForm(titleId) {
+            var form = document.getElementById('edit-form-' + titleId);
+            form.style.display = form.style.display === 'none' || form.style.display === '' ? 'block' : 'none';
+        }
+
+        function toggleAddSubtitleForm(titleId) {
+            var form = document.getElementById('add-subtitle-form-' + titleId);
+            form.style.display = form.style.display === 'none' || form.style.display === '' ? 'block' : 'none';
+        }
+
+        function toggleSubtitleEditForm(subtitleId) {
+            var form = document.getElementById('edit-subtitle-form-' + subtitleId);
+            form.style.display = form.style.display === 'none' || form.style.display === '' ? 'block' : 'none';
+        }
+
+        function loadContent(subtitleId) {
+            fetch(`/content/${subtitleId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('content-display').innerHTML = `
+                        <h3>${data.name}</h3>
+                        <p>${data.content}</p>
+                        <form action="/edit_content/${subtitleId}" method="POST" class="content-edit-form" id="content-edit-form">
+                            <div class="input-group">
+                                <textarea name="content" class="form-control" rows="10" required>${data.content}</textarea>
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="submit">Save</button>
+                                    <button class="btn btn-secondary" type="button" onclick="closeEditForm();">Cancel</button>
+                                </div>
+                            </div>
+                        </form>
+                    `;
+                    document.querySelector('.content-edit-form').style.display = 'block'; // Show the edit form
+                });
+        }
+
+        function closeEditForm() {
+            document.getElementById('content-edit-form').style.display = 'none';
+            document.getElementById('content-display').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

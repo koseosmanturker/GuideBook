@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guidebook Viewer</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: row;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .treeview {
+            width: 25%;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            box-sizing: border-box;
+            height: 100vh;
+            overflow-y: auto;
+            position: fixed;
+            background-color: #F7F012; /* BACKGROUND COLOR */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; 
+            text-align: center;
+        }
+
+        .treeview-content {
+            flex: 1; 
+            width: 100%;
+        }
+
+        .treeview-image {
+            width: 80%;
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .search-bar {
+            margin-bottom: 10px;
+        }
+
+            .search-bar input {
+                width: 100%;
+                padding: 5px;
+                font-size: 16px;
+                background-color: #333; 
+                color: #fff; 
+                border: 1px solid #555; 
+                border-radius: 4px; 
+            }
+
+                .search-bar input::placeholder {
+                    color: #aaa; 
+                }
+
+        .content {
+            left: 25%;
+            width: 75%;
+            padding: 10px;
+            box-sizing: border-box;
+            height: 100vh;
+            overflow-y: auto;
+            position: absolute;
+            background-color: #f0f0f0; /* BACKGROUND COLOR */
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-family: 'Helvetica', sans-serif;
+            text-align: left;
+        }
+
+            .title span {
+                white-space: normal; 
+                overflow: visible;
+                text-overflow: clip;
+                display: block;
+                width: calc(100% - 20px);
+            }
+
+            .title .icon {
+                margin-left: 10px;
+            }
+
+        .subtitles {
+            margin-left: 20px;
+            display: none;
+        }
+
+        .subtitle {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; 
+            margin-bottom: 5px;
+            text-align: left;
+        }
+
+            .subtitle a {
+                white-space: normal; 
+                overflow: visible;
+                text-overflow: clip;
+                display: block;
+                color: black;
+                text-decoration: none;
+                font-family: 'Times New Roman', serif;
+                width: 100%;
+            }
+
+                .subtitle a:hover {
+                    text-decoration: underline;
+                }
+
+        #content-display {
+            flex-grow: 1;
+        }
+
+        .bottom-image-container {
+            display: flex;
+            justify-content: center;
+            margin-top: auto; 
+        }
+
+        .bottom-image {
+            width: 80%;
+            max-width: 200px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="treeview">
+        <!-- Content above the bottom image -->
+        <div class="treeview-content">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT0BFUm2UwE_SeepNWIuPHX3NFmWLJWxLPCLw&s" alt="Treeview Image" class="treeview-image">
+
+            <!-- Search Bar -->
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Search...">
+            </div>
+
+            <!-- Title List -->
+            {% for title in titles %}
+            <div class="title-container">
+                <div class="title" onclick="toggleSubtitles({{ title.id }})">
+                    <span>
+                        <i class="fas fa-chevron-right icon" id="icon-{{ title.id }}"></i> {{ title.name }}
+                    </span>
+                </div>
+                <!-- Subtitles List -->
+                <div class="subtitles" id="subtitles-{{ title.id }}">
+                    {% for subtitle in title.subtitles %}
+                    <div class="subtitle">
+                        <a href="#" onclick="loadContent({{ subtitle.id }}); return false;">{{ subtitle.name }}</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Bottom Image -->
+        <div class="bottom-image-container">
+            <img src="https://www.serdarplastik.com.tr/images/logo.jpg" alt="Bottom Image" class="bottom-image">
+        </div>
+    </div>
+    <div class="content">
+        <div id="content-display"></div>
+    </div>
+
+    <script>
+        function toggleSubtitles(titleId) {
+            var subtitles = document.getElementById('subtitles-' + titleId);
+            var icon = document.getElementById('icon-' + titleId);
+            if (subtitles.style.display === 'none' || subtitles.style.display === '') {
+                subtitles.style.display = 'block';
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                subtitles.style.display = 'none';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
+        }
+
+        function loadContent(subtitleId) {
+            fetch(`/content/${subtitleId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('content-display').innerHTML = `
+                                    <strong><h1>${data.name}</h1></strong>
+                                    <p>${data.content}</p>
+                                `;
+                });
+        }
+
+        document.getElementById('search-input').addEventListener('input', function () {
+            var searchTerm = this.value.toLowerCase();
+            var titleContainers = document.querySelectorAll('.title-container');
+
+            titleContainers.forEach(function (titleContainer) {
+                var titleElement = titleContainer.querySelector('.title span');
+                var titleText = titleElement.textContent.toLowerCase();
+                var subtitles = titleContainer.querySelectorAll('.subtitle a');
+
+                // Initialize visibility flags
+                var titleVisible = titleText.includes(searchTerm);
+                var subtitleVisible = false;
+
+                // Check if any subtitle matches the search term
+                subtitles.forEach(function (subtitle) {
+                    if (subtitle.textContent.toLowerCase().includes(searchTerm)) {
+                        subtitleVisible = true;
+                    }
+                });
+
+                // Set the visibility of the title container
+                if (titleVisible || subtitleVisible) {
+                    titleContainer.style.display = '';
+                } else {
+                    titleContainer.style.display = 'none';
+                }
+
+                // Also set the visibility of subtitles based on search term
+                subtitles.forEach(function (subtitle) {
+                    if (titleVisible || subtitleVisible) {
+                        subtitle.parentElement.style.display = '';
+                    } else {
+                        subtitle.parentElement.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
